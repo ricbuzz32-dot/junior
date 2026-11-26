@@ -44,4 +44,126 @@ var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 var $=function(i){return document.getElementById(i);};
 var orb=$("orb"),stato=$("stato"),logEl=$("log");
 var rec=null,running=false,speaking=false,attesa=false,listening=false,svegliaFino=0,timerFine=null;
-var GIORNI=["dom
+var GIORNI=["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
+var MESI=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+var BARZ=["Sai perché il computer va dal dottore? Perché ha un virus!","Qual è il colmo per un elettricista? Non avere corrente di pensiero!","Cosa fa un gatto in autostrada? Il gatto di marcia!","Perché il pomodoro non riesce a dormire? Perché ha la pelle rossa e il sugo agitato!"];
+
+function setMode(m){document.body.setAttribute("data-mode",m);}
+function stat(t){stato.textContent=t;}
+function agg(t,c){var d=document.createElement("div");d.className="m "+c;d.textContent=t;logEl.insertBefore(d,logEl.firstChild);while(logEl.children.length>6)logEl.removeChild(logEl.lastChild);}
+
+function scegliVoce(){
+  var vs=speechSynthesis.getVoices().filter(function(x){return x.lang.replace("_","-").toLowerCase().indexOf("it")===0;});
+  var pref=["luca","giorgio","diego","cosimo"];
+  for(var i=0;i<pref.length;i++){for(var j=0;j<vs.length;j++){if(vs[j].name.toLowerCase().indexOf(pref[i])>=0)return vs[j];}}
+  return vs[0];
+}
+
+// sblocca la voce dentro il tocco (obbligatorio su iPad)
+function sblocca(){
+  try{var u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u);speechSynthesis.resume();}catch(e){}
+}
+
+function parla(t){
+  agg(t,"j");speaking=true;setMode("parla");stat("Junior sta parlando…");
+  try{if(rec)rec.abort();}catch(e){}
+  var u=new SpeechSynthesisUtterance(t);u.lang="it-IT";
+  var v=scegliVoce();if(v)u.voice=v;
+  u.pitch=1.3;u.rate=1.08;u.volume=1;
+  var done=false;
+  var fine=function(){
+    if(done)return;done=true;clearTimeout(timerFine);
+    speaking=false;svegliaFino=Date.now()+20000;
+    if(running){setMode("ascolto");setTimeout(avvia,400);}else{setMode("idle");}
+  };
+  u.onend=fine;
+  u.onerror=function(e){stat("Errore voce: "+(e.error||"sconosciuto")+" — controlla volume e tasto silenzioso");fine();};
+  clearTimeout(timerFine);
+  timerFine=setTimeout(fine,Math.max(3000,t.length*95+2500));
+  try{
+    if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel();
+    speechSynthesis.speak(u); // subito, senza ritardi
+    speechSynthesis.resume();
+  }catch(e){stat("Errore voce: "+e.message);fine();}
+}
+
+function esegui(c,silenzioso){
+  var o=new Date(),m;
+  if(/esci|stop|spegniti|arrivederci/.test(c)){running=false;parla("Ok, a dopo! Chiamami quando vuoi.");orb.textContent="AVVIA";return;}
+  if(/^(ciao|ehi|hey|salve)/.test(c))return parla("Ehi! Che si dice? Dimmi tutto!");
+  if(/come stai/.test(c))return parla("Alla grande! Sono carico a mille. E tu?");
+  if(/come ti chiami|chi sei/.test(c))return parla("Sono Junior, il tuo assistente vocale. Il più figo in circolazione!");
+  if(/grazie/.test(c))return parla("Figurati! Quando vuoi.");
+  if(/che ore sono|che ora è/.test(c))return parla("Sono le "+o.getHours()+" e "+("0"+o.getMinutes()).slice(-2)+". Il tempo vola!");
+  if(/che giorno|data di oggi/.test(c))return parla("Oggi è "+GIORNI[o.getDay()]+" "+o.getDate()+" "+MESI[o.getMonth()]+" "+o.getFullYear());
+  if(/barzelletta/.test(c))return parla(BARZ[Math.floor(Math.random()*BARZ.length)]);
+  if(/dado/.test(c))return parla("Ho tirato il dado ed è uscito "+(Math.floor(Math.random()*6)+1)+"!");
+  if(/moneta/.test(c))return parla(Math.random()<0.5?"Testa!":"Croce!");
+  if(/apri youtube/.test(c)){parla("Boom, apro YouTube!");return window.open("https://www.youtube.com","_blank");}
+  m=c.match(/^(riproduci|metti|suona)\s+(.+)/);
+  if(m){parla("Ti cerco "+m[2]+" su YouTube!");return window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(m[2]),"_blank");}
+  m=c.match(/^(cerca|cercami|chi è|cos’è|cos'è|che cos’è)\s*(.+)/);
+  if(m){parla("Cerco "+m[2]+" su Google!");return window.open("https://www.google.com/search?q="+encodeURIComponent(m[2]),"_blank");}
+  if(!silenzioso)parla("Boh, non ho capito. Riprova!");
+}
+
+function avvia(){if(listening||speaking||!running)return;try{rec.start();}catch(e){}}
+
+function elabora(t){
+  agg(t,"t");
+  if(attesa){attesa=false;return esegui(t);}
+  var m=t.match(/giunior|iunior|juniore|junior/);
+  if(m){
+    var c=t.slice(m.index+m[0].length).replace(/^[\s,.]+/,"");
+    if(!c){attesa=true;parla("Dimmi!");}else esegui(c);
+  }else if(Date.now()<svegliaFino){
+    esegui(t,true);
+  }
+}
+
+function init(){
+  rec=new SR();rec.lang="it-IT";rec.continuous=false;rec.interimResults=true;
+  rec.onstart=function(){
+    listening=true;setMode("ascolto");
+    stat(Date.now()<svegliaFino?"Ti ascolto… continua pure, senza dire “Junior”":"In ascolto… di’ “Junior”");
+  };
+  rec.onresult=function(ev){
+    if(speaking)return;
+    for(var i=ev.resultIndex;i<ev.results.length;i++){
+      var t=ev.results[i][0].transcript.toLowerCase().trim();
+      if(ev.results[i].isFinal)elabora(t);else stat("Sento: "+t);
+    }
+  };
+  rec.onend=function(){listening=false;if(running&&!speaking)setTimeout(avvia,250);};
+  rec.onerror=function(e){
+    var msg=null;
+    if(e.error==="service-not-allowed")msg="Attiva la dettatura: Impostazioni > Generali > Tastiera > Abilita dettatura (e controlla che Siri sia attivo).";
+    else if(e.error==="not-allowed")msg="Microfono bloccato. Consenti il microfono per questo sito nelle impostazioni di Safari.";
+    else if(e.error==="network")msg="Serve una connessione internet.";
+    if(msg){stat(msg);running=false;setMode("idle");orb.textContent="AVVIA";}
+  };
+}
+
+setInterval(function(){if(running&&!speaking&&!listening)avvia();},1500);
+
+orb.onclick=function(){
+  sblocca();
+  if(!SR){stat("Questo browser non supporta il riconoscimento vocale. Usa Safari o Chrome.");return;}
+  if(running){running=false;try{rec.abort();}catch(e){}setMode("idle");orb.textContent="AVVIA";stat("");return;}
+  if(!rec)init();
+  running=true;orb.textContent="STOP";
+  avvia();
+};
+
+$("test").onclick=function(){
+  var v=scegliVoce();
+  parla("Yo! Sono Junior. Se mi senti, la voce funziona alla grande!");
+  setTimeout(function(){if(speaking)stat("Voce: "+(v?v.name:"predefinita"));},50);
+};
+$("invia").onclick=function(){var v=$("testo").value.toLowerCase().trim();if(v){agg(v,"t");$("testo").value="";esegui(v.replace(/^junior[\s,.]*/,""));}};
+var chips=document.querySelectorAll(".chip[data-c]");
+for(var k=0;k<chips.length;k++){chips[k].onclick=function(){esegui(this.getAttribute("data-c"));};}
+if(window.speechSynthesis)speechSynthesis.getVoices();
+</script>
+</body>
+</html>
