@@ -8,76 +8,79 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}
-:root{--c:#22d3ee;--v:#a78bfa;--m:#f472b6;--bg:#02060f}
-body{margin:0;min-height:100vh;color:#d8f6ff;font-family:"Rajdhani",-apple-system,system-ui,sans-serif;font-size:1.05rem;background:
- radial-gradient(circle at 50% 28%,#0b2a4a 0%,#041226 40%,var(--bg) 75%);
- display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 28px;overflow-x:hidden}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.35;
- background-image:linear-gradient(#22d3ee22 1px,transparent 1px),linear-gradient(90deg,#22d3ee22 1px,transparent 1px);
- background-size:44px 44px;-webkit-mask-image:radial-gradient(circle at 50% 35%,#000 20%,transparent 75%);mask-image:radial-gradient(circle at 50% 35%,#000 20%,transparent 75%)}
-body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:5;opacity:.18;
- background:repeating-linear-gradient(0deg,#000 0,#000 1px,transparent 1px,transparent 3px)}
-body>*{position:relative;z-index:1}
-.hud{width:100%;max-width:620px;display:flex;justify-content:space-between;align-items:center;font-family:"Orbitron",sans-serif;font-size:.68rem;letter-spacing:2px;color:#67e8f9;border-bottom:1px solid #22d3ee55;padding-bottom:8px}
-.hud b{color:#fff;font-weight:700}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399;margin-right:6px;animation:blink 1.6s infinite}
-@keyframes blink{50%{opacity:.25}}
-h1{margin:18px 0 0;font-family:"Orbitron",sans-serif;font-weight:900;font-size:2.5rem;letter-spacing:10px;padding-left:10px;color:#fff;text-shadow:0 0 12px var(--c),0 0 32px #22d3ee88}
-.ver{font-family:"Orbitron",sans-serif;font-size:.62rem;letter-spacing:3px;color:#38bdf8aa;margin:4px 0 0}
-.sub{margin:10px 0 8px;color:#8fd8ee;text-align:center;max-width:460px}
-#err{display:none;background:#7f1d1d;color:#fff;padding:10px 14px;margin-bottom:12px;max-width:560px;font-size:.9rem;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
-.core{position:relative;width:250px;height:250px;display:grid;place-items:center;margin:8px 0}
-.ring{position:absolute;border-radius:50%;pointer-events:none}
-.r1{inset:0;border:2px solid transparent;border-top-color:var(--c);border-bottom-color:#22d3ee44;animation:spin 7s linear infinite;filter:drop-shadow(0 0 6px var(--c))}
-.r2{inset:18px;border:2px solid transparent;border-left-color:var(--v);border-right-color:#a78bfa44;animation:spin 4.5s linear infinite reverse;filter:drop-shadow(0 0 6px var(--v))}
-.r3{inset:36px;border:1px dashed #22d3ee77;animation:spin 24s linear infinite}
-.r4{inset:-10px;border:1px solid #22d3ee22;box-shadow:0 0 40px #22d3ee22 inset}
-@keyframes spin{to{transform:rotate(360deg)}}
-#orb{position:relative;width:148px;height:148px;border-radius:50%;border:1px solid #67e8f9;color:#e6fbff;font-family:"Orbitron",sans-serif;font-weight:700;font-size:1rem;letter-spacing:3px;cursor:pointer;
- background:radial-gradient(circle at 50% 38%,#0e7490 0%,#083047 55%,#041a2b 100%);box-shadow:0 0 28px #22d3ee66,inset 0 0 28px #22d3ee44;transition:background .4s,box-shadow .4s,border-color .4s}
-body[data-mode="ascolto"]{--c:#34d399}
-body[data-mode="ascolto"] #orb{border-color:#6ee7b7;background:radial-gradient(circle at 50% 38%,#047857 0%,#06402f 55%,#03221a 100%);box-shadow:0 0 36px #34d39988,inset 0 0 28px #34d39955;animation:respira 1.6s ease-in-out infinite}
-body[data-mode="parla"]{--c:#f472b6;--v:#fb7185}
-body[data-mode="parla"] #orb{border-color:#f9a8d4;background:radial-gradient(circle at 50% 38%,#9d174d 0%,#500a2a 55%,#2a0517 100%);box-shadow:0 0 40px #f472b699,inset 0 0 28px #f472b666;animation:respira .6s ease-in-out infinite}
-body[data-mode="parla"] .r1{animation-duration:2.2s}
-body[data-mode="parla"] .r2{animation-duration:1.6s}
-body[data-mode="ascolto"] .r1{animation-duration:4s}
-@keyframes respira{50%{transform:scale(1.07)}}
-#modo{font-family:"Orbitron",sans-serif;font-size:.72rem;letter-spacing:4px;color:var(--c);text-shadow:0 0 8px var(--c);margin-top:2px}
-#stato{margin:10px 0 14px;color:#9fe3f5;min-height:1.4em;text-align:center;max-width:520px}
+body{margin:0;background:#000;color:#fff;font-family:"Rajdhani",-apple-system,system-ui,sans-serif;font-size:1.05rem}
+#fondo{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .6s ease;background:radial-gradient(circle at 50% 42%,#ff3030 0%,#c40000 42%,#5a0000 100%)}
+body.allerta #fondo{opacity:1}
+main{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 28px}
+.hud{width:100%;max-width:620px;display:flex;justify-content:space-between;align-items:center;font-family:"Orbitron",sans-serif;font-size:.68rem;letter-spacing:2px;color:#ffffffcc;border-bottom:1px solid #ffffff33;padding-bottom:8px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399;margin-right:6px}
+h1{margin:14px 0 0;font-family:"Orbitron",sans-serif;font-weight:900;font-size:2rem;letter-spacing:10px;padding-left:10px;color:#fff}
+.ver{font-family:"Orbitron",sans-serif;font-size:.6rem;letter-spacing:3px;color:#ffffff88;margin:4px 0 0}
+#err{display:none;background:#7f1d1d;color:#fff;padding:10px 14px;margin:10px 0;max-width:560px;font-size:.9rem;border-radius:8px}
+#robot{width:min(66vw,280px);height:auto;margin:12px 0 4px;filter:drop-shadow(0 14px 22px #00000099);cursor:pointer}
+#orb{border:1px solid #ffffff88;background:#ffffff14;color:#fff;font-family:"Orbitron",sans-serif;font-weight:700;font-size:.85rem;letter-spacing:4px;padding:12px 34px;border-radius:999px;cursor:pointer}
+#modo{font-family:"Orbitron",sans-serif;font-size:.68rem;letter-spacing:4px;color:#ffffffcc;margin-top:12px}
+#stato{margin:8px 0 14px;color:#ffffffcc;min-height:1.4em;text-align:center;max-width:520px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:600px;margin-bottom:14px}
-.chip{font-family:"Rajdhani",sans-serif;font-weight:600;font-size:1rem;letter-spacing:1px;color:#c9f4ff;background:linear-gradient(135deg,#0a2a40,#071a2c);border:0;padding:10px 16px;cursor:pointer;
- clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);box-shadow:0 0 0 1px #22d3ee88 inset}
-.chip:active{background:#0e5a7a}
+.chip{font-family:"Rajdhani",sans-serif;font-weight:600;font-size:1rem;letter-spacing:1px;color:#fff;background:#ffffff14;border:1px solid #ffffff44;padding:9px 15px;border-radius:12px;cursor:pointer}
+.chip:active{background:#ffffff33}
 .riga{display:flex;gap:8px;width:100%;max-width:600px;margin-bottom:16px}
-#testo{flex:1;min-width:0;border:1px solid #22d3ee66;background:#04162a;color:#e6fbff;padding:12px 14px;font-family:"Rajdhani",sans-serif;font-size:1.05rem;outline:none;
- clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
-#testo:focus{box-shadow:0 0 14px #22d3ee66}
-.riga button{border:0;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;padding:0 20px;font-family:"Orbitron",sans-serif;font-size:.75rem;letter-spacing:2px;font-weight:700;cursor:pointer;
- clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+#testo{flex:1;min-width:0;border:1px solid #ffffff55;background:#00000066;color:#fff;padding:12px 14px;font-family:"Rajdhani",sans-serif;font-size:1.05rem;outline:none;border-radius:12px}
+.riga button{border:0;background:#ffffff;color:#111;padding:0 20px;font-family:"Orbitron",sans-serif;font-size:.72rem;letter-spacing:2px;font-weight:700;cursor:pointer;border-radius:12px}
 #log{width:100%;max-width:600px;display:flex;flex-direction:column;gap:10px}
-.m{padding:10px 14px;max-width:92%;position:relative;line-height:1.3;background:#04162acc;backdrop-filter:blur(4px)}
+.m{padding:10px 14px;max-width:92%;line-height:1.3;background:#000000a8;border-radius:12px}
 .m::before{display:block;font-family:"Orbitron",sans-serif;font-size:.55rem;letter-spacing:3px;margin-bottom:3px;opacity:.8}
-.j{align-self:flex-start;border-left:3px solid var(--c);box-shadow:0 0 14px #22d3ee22}
-.j::before{content:"JUNIOR";color:#22d3ee}
-.t{align-self:flex-end;border-right:3px solid var(--m);text-align:right;box-shadow:0 0 14px #f472b622}
-.t::before{content:"TU";color:#f472b6}
-.m a{color:#67e8f9}
+.j{align-self:flex-start;border-left:3px solid #fff}
+.j::before{content:"JUNIOR"}
+.t{align-self:flex-end;border-right:3px solid #fff;text-align:right}
+.t::before{content:"TU"}
+.m a{color:#bae6fd}
 </style>
 </head>
 <body data-mode="idle">
+<div id="fondo"></div>
+<main>
 <div id="err"></div>
 <script>
 window.onerror=function(m,s,l){var e=document.getElementById("err");if(e){e.style.display="block";e.textContent="Errore: "+m+" (riga "+l+")";}};
 </script>
-<div class="hud"><span><span class="dot"></span>SISTEMA <b>ONLINE</b></span><span id="clock">--:--:--</span></div>
+<div class="hud"><span><span class="dot"></span>ONLINE</span><span id="clock">--:--:--</span></div>
 <h1>JUNIOR</h1>
-<div class="ver">ASSISTENTE VOCALE · v10</div>
-<p class="sub">Chiedimi di matematica, informatica, robotica, italiano… “Junior, cos’è un servomotore?”</p>
-<div class="core">
-  <div class="ring r4"></div><div class="ring r3"></div><div class="ring r2"></div><div class="ring r1"></div>
-  <button id="orb">AVVIA</button>
-</div>
+<div class="ver">ASSISTENTE VOCALE · v11</div>
+
+<svg id="robot" viewBox="0 0 300 420" xmlns="http://www.w3.org/2000/svg" aria-label="Robot Junior">
+  <defs>
+    <radialGradient id="gb" cx="38%" cy="28%" r="85%">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#eef2f7"/><stop offset="1" stop-color="#c3ccd8"/>
+    </radialGradient>
+    <radialGradient id="gh" cx="40%" cy="25%" r="90%">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#eef2f7"/><stop offset="1" stop-color="#cbd5e1"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="150" cy="402" rx="105" ry="12" fill="#00000055"/>
+  <rect x="98" y="306" width="48" height="78" rx="24" fill="url(#gb)"/>
+  <rect x="154" y="306" width="48" height="78" rx="24" fill="url(#gb)"/>
+  <ellipse cx="120" cy="384" rx="34" ry="14" fill="#dbe3ec"/>
+  <ellipse cx="180" cy="384" rx="34" ry="14" fill="#dbe3ec"/>
+  <ellipse cx="150" cy="214" rx="90" ry="116" fill="url(#gb)"/>
+  <path d="M150 268 L150 326" stroke="#c7d0dc" stroke-width="2" fill="none"/>
+  <path d="M82 262 Q150 282 218 262" stroke="#d4dce6" stroke-width="2" fill="none"/>
+  <ellipse cx="60" cy="208" rx="27" ry="88" transform="rotate(7 60 208)" fill="url(#gb)"/>
+  <ellipse cx="240" cy="208" rx="27" ry="88" transform="rotate(-7 240 208)" fill="url(#gb)"/>
+  <circle cx="46" cy="292" r="24" fill="#eef2f7"/>
+  <circle cx="254" cy="292" r="24" fill="#eef2f7"/>
+  <ellipse cx="150" cy="100" rx="34" ry="11" fill="#e2e8f0"/>
+  <rect x="104" y="22" width="92" height="76" rx="38" fill="url(#gh)"/>
+  <rect x="117" y="40" width="66" height="36" rx="18" fill="#0b1220"/>
+  <ellipse cx="137" cy="58" rx="7" ry="9" fill="#7dd3fc"/>
+  <ellipse cx="163" cy="58" rx="7" ry="9" fill="#7dd3fc"/>
+  <line x1="150" y1="22" x2="150" y2="8" stroke="#cbd5e1" stroke-width="3"/>
+  <circle cx="150" cy="6" r="4.5" fill="#cbd5e1"/>
+  <circle cx="196" cy="154" r="14" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+  <circle cx="196" cy="154" r="5" fill="#94a3b8"/>
+</svg>
+
+<button id="orb">AVVIA</button>
 <div id="modo">STANDBY</div>
 <div id="stato"></div>
 <div class="chips">
@@ -92,6 +95,7 @@ window.onerror=function(m,s,l){var e=document.getElementById("err");if(e){e.styl
 </div>
 <div class="riga"><input id="testo" placeholder="Scrivi un comando…"><button id="invia">INVIA</button></div>
 <div id="log"></div>
+</main>
 <script>
 var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 var $=function(i){return document.getElementById(i);};
@@ -104,9 +108,15 @@ var ETICHETTE={idle:"STANDBY",ascolto:"ASCOLTO IN CORSO",parla:"TRASMISSIONE VOC
 var WAKE=/giunior|iunior|juniore|junior/;
 var STOP=["il","lo","la","l","i","gli","le","un","una","uno","di","a","da","in","con","su","per","tra","fra","e","è","che","chi","cosa","come","quando","dove","perché","quale","quali","quanto","quanti","mi","ti","si","sono","era","dei","del","della","delle","dello","degli","nel","nella","nei","al","alla","ai","ho","ha","fa","fanno","può","puoi","dimmi","spiegami","parlami","sapere","vorrei","voglio","sai","dire","funziona","funzionano","fatto","fatta"];
 
+/* sfondo: nero in standby, rosso appena lo chiami */
+function aggiornaSfondo(){
+  var attivo=running&&(Date.now()<svegliaFino||speaking||occupato||!!attesaFn);
+  document.body.classList.toggle("allerta",attivo);
+}
+setInterval(aggiornaSfondo,250);
+
 /* ---------- CONOSCENZA INTERNA ---------- */
 var KB=[
-/* matematica */
 [/pitagora/,"Il teorema di Pitagora dice che, in un triangolo rettangolo, il quadrato dell’ipotenusa è uguale alla somma dei quadrati dei cateti."],
 [/numero primo|numeri primi/,"Un numero primo è un numero naturale maggiore di uno, divisibile solo per uno e per se stesso, come 2, 3, 5, 7 e 11."],
 [/pi greco|π/,"Pi greco è il rapporto tra la circonferenza e il diametro di un cerchio: vale circa 3,14159 ed è un numero irrazionale."],
@@ -119,7 +129,6 @@ var KB=[
 [/\bseno\b|coseno|trigonometri/,"In un triangolo rettangolo il seno di un angolo è il rapporto tra cateto opposto e ipotenusa, il coseno è il rapporto tra cateto adiacente e ipotenusa."],
 [/frazion/,"Una frazione rappresenta una parte di un intero: il numeratore dice quante parti si prendono, il denominatore in quante parti è diviso l’intero."],
 [/\bfunzione\b/,"In matematica una funzione associa a ogni elemento di un insieme uno e un solo elemento di un altro. In informatica è un blocco di codice riutilizzabile che può ricevere dati e restituire un risultato."],
-/* informatica */
 [/algoritmo/,"Un algoritmo è una sequenza finita di istruzioni precise che permette di risolvere un problema o svolgere un compito."],
 [/variabile/,"In programmazione una variabile è uno spazio di memoria con un nome, dove si conserva un valore che può cambiare."],
 [/\bcicl[oi]\b|\bloop\b/,"Un ciclo è una struttura di programmazione che ripete un blocco di istruzioni finché una condizione è vera, come i cicli for e while."],
@@ -137,7 +146,6 @@ var KB=[
 [/\bcloud\b/,"Il cloud è l’uso di computer remoti, collegati a internet, per archiviare dati e far girare programmi invece di usare solo il proprio dispositivo."],
 [/compilatore/,"Un compilatore è un programma che traduce il codice scritto dal programmatore in istruzioni che il computer può eseguire."],
 [/\bbug\b/,"Un bug è un errore in un programma che provoca un comportamento sbagliato o inatteso."],
-/* robotica */
 [/leggi della robotica|asimov/,"Le tre leggi della robotica di Isaac Asimov dicono: un robot non può far del male a un essere umano; deve obbedire agli ordini umani, tranne se vanno contro la prima legge; deve proteggere se stesso, se questo non va contro le prime due."],
 [/servomotore|\bservo\b/,"Un servomotore è un motore con un sensore di posizione e un circuito di controllo, che permette di portare un albero a un angolo preciso. È molto usato nei bracci robotici."],
 [/attuator/,"Un attuatore è il componente che fa muovere un robot, trasformando energia elettrica, idraulica o pneumatica in movimento. Un esempio sono i motori."],
@@ -150,7 +158,6 @@ var KB=[
 [/encoder/,"Un encoder è un sensore che misura la rotazione di un albero. Serve a conoscere posizione e velocità di un motore."],
 [/microcontrollore/,"Un microcontrollore è un piccolo computer su un singolo chip, con processore, memoria e ingressi e uscite, pensato per controllare dispositivi."],
 [/\brobot\b|robotica/,"Un robot è una macchina programmabile che percepisce l’ambiente con dei sensori e agisce su di esso con degli attuatori. La robotica è la scienza che li progetta e li costruisce."],
-/* italiano */
 [/congiuntivo/,"Il congiuntivo è un modo verbale che esprime dubbio, desiderio, possibilità o opinione, come in: penso che tu abbia ragione."],
 [/\bverbo\b|\bverbi\b/,"Il verbo è la parte del discorso che indica un’azione, uno stato o un modo di essere. Cambia secondo modo, tempo, persona e numero."],
 [/sostantivo|\bnome\b/,"Il nome, o sostantivo, è la parte del discorso che indica persone, animali, cose, luoghi o idee."],
@@ -194,15 +201,15 @@ function fermaRec(){
 function interrompi(){
   parlaTok++;clearTimeout(timerFine);
   try{speechSynthesis.cancel();}catch(e){}
-  speaking=false;svegliaFino=Date.now()+20000;
+  speaking=false;svegliaFino=Date.now()+20000;aggiornaSfondo();
   setMode("ascolto");stat("Ti ascolto…");
   if(running&&!rec)setTimeout(avvia,200);
 }
 
 function parla(t){
   occupato=false;
-  agg(t,"j");speaking=true;setMode("parla");
-  stat(bargeIn?"Sto parlando… di’ “Junior” o tocca il nucleo per interrompermi":"Sto parlando…");
+  agg(t,"j");speaking=true;setMode("parla");aggiornaSfondo();
+  stat(bargeIn?"Sto parlando… di’ “Junior” o tocca il robot per interrompermi":"Sto parlando…");
   if(!bargeIn)fermaRec();else if(!rec&&running)setTimeout(avvia,500);
   var tok=++parlaTok;
   var u=new SpeechSynthesisUtterance(t);u.lang="it-IT";
@@ -213,6 +220,7 @@ function parla(t){
     if(done||tok!==parlaTok)return;done=true;clearTimeout(timerFine);
     speaking=false;svegliaFino=Date.now()+20000;
     if(running){setMode("ascolto");stat("In ascolto…");if(!rec)setTimeout(avvia,500);}else{setMode("idle");}
+    aggiornaSfondo();
   };
   u.onend=fine;
   u.onerror=function(e){
@@ -279,7 +287,7 @@ function pulisci(c){
 
 function rispondiWeb(c){
   var q=pulisci(c);if(!q)q=c;
-  occupato=true;stat("Cerco online: "+q+"…");
+  occupato=true;aggiornaSfondo();stat("Cerco online: "+q+"…");
   var tentativi=[q],k=keywords(q);
   if(k&&k!==q)tentativi.push(k);
   var i=0;
@@ -300,7 +308,7 @@ function rispondiWeb(c){
 }
 
 function curiosita(){
-  occupato=true;stat("Cerco una curiosità…");
+  occupato=true;aggiornaSfondo();stat("Cerco una curiosità…");
   fetch("https://it.wikipedia.org/api/rest_v1/page/random/summary").then(function(r){return r.json();}).then(function(d){
     ultimo={t:d.title,f:dividi(d.extract||""),i:0};
     link("Leggi di più: "+d.title,"https://it.wikipedia.org/wiki/"+encodeURIComponent(d.title.replace(/ /g,"_")));
@@ -322,7 +330,7 @@ function descr(k){
 }
 
 function meteo(citta){
-  occupato=true;stat("Controllo il meteo a "+citta+"…");
+  occupato=true;aggiornaSfondo();stat("Controllo il meteo a "+citta+"…");
   fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(citta)+"&count=1&language=it&format=json")
   .then(function(r){return r.json();}).then(function(g){
     if(!g.results||!g.results.length){return parla("Non trovo la città "+citta+".");}
@@ -447,6 +455,7 @@ function elabora(t){
   if(attesaFn){var f=attesaFn;attesaFn=null;return f(t);}
   var m=t.match(WAKE);
   if(m){
+    svegliaFino=Date.now()+20000;aggiornaSfondo(); // chiamato: sfondo rosso
     var c=t.slice(m.index+m[0].length).replace(/^[\s,.]+/,"");
     if(!c){attesaFn=esegui;parla("Dimmi!");}else esegui(c);
   }else if(Date.now()<svegliaFino){
@@ -471,6 +480,7 @@ function avvia(){
       if(occupato)return;
       for(var i=ev.resultIndex;i<ev.results.length;i++){
         var t=ev.results[i][0].transcript.toLowerCase().trim();
+        if(WAKE.test(t)&&!speaking&&Date.now()>=svegliaFino){svegliaFino=Date.now()+20000;aggiornaSfondo();} // reazione immediata
         if(speaking){
           if(WAKE.test(t)||/^(basta|fermati|zitto|silenzio)\b/.test(t))interrompi();else continue;
         }
@@ -483,7 +493,7 @@ function avvia(){
       if(e.error==="service-not-allowed")msg="Attiva la dettatura: Impostazioni > Generali > Tastiera > Abilita dettatura (e controlla che Siri sia attivo).";
       else if(e.error==="not-allowed")msg="Microfono bloccato. Consenti il microfono per questo sito nelle impostazioni di Safari.";
       else if(e.error==="network")msg="Serve una connessione internet.";
-      if(msg){stat(msg);running=false;setMode("idle");orb.textContent="AVVIA";}
+      if(msg){stat(msg);running=false;setMode("idle");orb.textContent="AVVIA";aggiornaSfondo();}
     };
     rec.start();
   }catch(e){stat("Microfono: "+e.message);}
@@ -493,14 +503,16 @@ setInterval(function(){
   if(running&&!occupato&&(!speaking||bargeIn)&&Date.now()-ultimaAttivita>8000)avvia();
 },2000);
 
-orb.addEventListener("click",function(){
+function toggle(){
   if(!SR){stat("Questo browser non supporta il riconoscimento vocale. Usa Safari o Chrome.");return;}
   if(running&&speaking){interrompi();return;}
   try{var u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u);}catch(e){}
-  if(running){running=false;fermaRec();setMode("idle");orb.textContent="AVVIA";stat("");return;}
+  if(running){running=false;fermaRec();setMode("idle");orb.textContent="AVVIA";stat("");aggiornaSfondo();return;}
   running=true;orb.textContent="STOP";
   avvia();
-});
+}
+orb.addEventListener("click",toggle);
+$("robot").addEventListener("click",function(){if(running&&speaking)interrompi();else if(!running)toggle();});
 
 $("test").addEventListener("click",function(){
   parla("Yo! Eccomi. Se mi senti, la voce funziona alla grande!");
@@ -509,11 +521,11 @@ $("test").addEventListener("click",function(){
 });
 $("bi").addEventListener("click",function(){
   bargeIn=!bargeIn;this.textContent="✋ INTERRUZIONE: "+(bargeIn?"ON":"OFF");
-  stat(bargeIn?"Puoi interrompermi dicendo Junior.":"Interruzione vocale spenta: tocca il nucleo per interrompermi.");
+  stat(bargeIn?"Puoi interrompermi dicendo Junior.":"Interruzione vocale spenta: tocca il robot per interrompermi.");
 });
-$("invia").addEventListener("click",function(){var v=$("testo").value.toLowerCase().trim();if(v){agg(v,"t");$("testo").value="";esegui(v.replace(/^junior[\s,.]*/,""));}});
+$("invia").addEventListener("click",function(){var v=$("testo").value.toLowerCase().trim();if(v){agg(v,"t");$("testo").value="";svegliaFino=Date.now()+20000;aggiornaSfondo();esegui(v.replace(/^junior[\s,.]*/,""));}});
 var chips=document.querySelectorAll(".chip[data-c]");
-for(var k=0;k<chips.length;k++){chips[k].addEventListener("click",function(){esegui(this.getAttribute("data-c"));});}
+for(var k=0;k<chips.length;k++){chips[k].addEventListener("click",function(){svegliaFino=Date.now()+20000;aggiornaSfondo();esegui(this.getAttribute("data-c"));});}
 if(window.speechSynthesis)speechSynthesis.getVoices();
 </script>
 </body>
