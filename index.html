@@ -72,8 +72,8 @@ window.onerror=function(m,s,l){var e=document.getElementById("err");if(e){e.styl
 </script>
 <div class="hud"><span><span class="dot"></span>SISTEMA <b>ONLINE</b></span><span id="clock">--:--:--</span></div>
 <h1>JUNIOR</h1>
-<div class="ver">ASSISTENTE VOCALE · v9</div>
-<p class="sub">Tocca il nucleo e chiedimi qualsiasi cosa: “Junior, chi era Napoleone?”</p>
+<div class="ver">ASSISTENTE VOCALE · v10</div>
+<p class="sub">Chiedimi di matematica, informatica, robotica, italiano… “Junior, cos’è un servomotore?”</p>
 <div class="core">
   <div class="ring r4"></div><div class="ring r3"></div><div class="ring r2"></div><div class="ring r1"></div>
   <button id="orb">AVVIA</button>
@@ -83,10 +83,12 @@ window.onerror=function(m,s,l){var e=document.getElementById("err");if(e){e.styl
 <div class="chips">
   <button class="chip" data-c="che ore sono">⏰ ORA</button>
   <button class="chip" data-c="che tempo fa a Roma">🌦️ METEO</button>
-  <button class="chip" data-c="dimmi una curiosità">💡 CURIOSITÀ</button>
-  <button class="chip" data-c="raccontami una barzelletta">😂 BARZELLETTA</button>
-  <button class="chip" data-c="tira un dado">🎲 DADO</button>
+  <button class="chip" data-c="quanto fa la radice quadrata di 144">📐 MATEMATICA</button>
+  <button class="chip" data-c="cos'è un servomotore">🤖 ROBOTICA</button>
+  <button class="chip" data-c="cos'è un algoritmo">💻 INFORMATICA</button>
+  <button class="chip" data-c="cos'è il congiuntivo">📖 ITALIANO</button>
   <button class="chip" id="test">🔊 TEST VOCE</button>
+  <button class="chip" id="bi">✋ INTERRUZIONE: ON</button>
 </div>
 <div class="riga"><input id="testo" placeholder="Scrivi un comando…"><button id="invia">INVIA</button></div>
 <div id="log"></div>
@@ -94,12 +96,71 @@ window.onerror=function(m,s,l){var e=document.getElementById("err");if(e){e.styl
 var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 var $=function(i){return document.getElementById(i);};
 var orb=$("orb"),stato=$("stato"),logEl=$("log");
-var rec=null,running=false,speaking=false,attesaFn=null,occupato=false,svegliaFino=0,timerFine=null,ultimaAttivita=0,ultimo=null;
+var rec=null,running=false,speaking=false,attesaFn=null,occupato=false,svegliaFino=0,timerFine=null,ultimaAttivita=0,ultimo=null,bargeIn=true,parlaTok=0;
 var GIORNI=["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
 var MESI=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 var BARZ=["Sai perché il computer va dal dottore? Perché ha un virus!","Qual è il colmo per un elettricista? Non avere corrente di pensiero!","Cosa fa un gatto in autostrada? Il gatto di marcia!","Perché il pomodoro non riesce a dormire? Perché ha la pelle rossa e il sugo agitato!"];
 var ETICHETTE={idle:"STANDBY",ascolto:"ASCOLTO IN CORSO",parla:"TRASMISSIONE VOCALE"};
+var WAKE=/giunior|iunior|juniore|junior/;
 var STOP=["il","lo","la","l","i","gli","le","un","una","uno","di","a","da","in","con","su","per","tra","fra","e","è","che","chi","cosa","come","quando","dove","perché","quale","quali","quanto","quanti","mi","ti","si","sono","era","dei","del","della","delle","dello","degli","nel","nella","nei","al","alla","ai","ho","ha","fa","fanno","può","puoi","dimmi","spiegami","parlami","sapere","vorrei","voglio","sai","dire","funziona","funzionano","fatto","fatta"];
+
+/* ---------- CONOSCENZA INTERNA ---------- */
+var KB=[
+/* matematica */
+[/pitagora/,"Il teorema di Pitagora dice che, in un triangolo rettangolo, il quadrato dell’ipotenusa è uguale alla somma dei quadrati dei cateti."],
+[/numero primo|numeri primi/,"Un numero primo è un numero naturale maggiore di uno, divisibile solo per uno e per se stesso, come 2, 3, 5, 7 e 11."],
+[/pi greco|π/,"Pi greco è il rapporto tra la circonferenza e il diametro di un cerchio: vale circa 3,14159 ed è un numero irrazionale."],
+[/derivat/,"La derivata di una funzione misura quanto velocemente cambia in un punto. Geometricamente è il coefficiente angolare della retta tangente al grafico."],
+[/integral/,"L’integrale permette di calcolare l’area sotto il grafico di una funzione, ed è l’operazione inversa della derivata."],
+[/equazione/,"Un’equazione è un’uguaglianza che contiene una incognita. Risolverla significa trovare i valori che la rendono vera."],
+[/percentual|per cento/,"La percentuale indica una parte su cento. Per trovare il venti per cento di un numero, lo si moltiplica per zero virgola venti."],
+[/massimo comun divisore|\bmcd\b|minimo comune multiplo|\bmcm\b/,"Il massimo comun divisore è il numero più grande che divide due numeri. Il minimo comune multiplo è il più piccolo numero che è multiplo di entrambi."],
+[/logaritm/,"Il logaritmo in base b di un numero x è l’esponente a cui bisogna elevare b per ottenere x. Ad esempio il logaritmo in base 10 di 1000 è 3."],
+[/\bseno\b|coseno|trigonometri/,"In un triangolo rettangolo il seno di un angolo è il rapporto tra cateto opposto e ipotenusa, il coseno è il rapporto tra cateto adiacente e ipotenusa."],
+[/frazion/,"Una frazione rappresenta una parte di un intero: il numeratore dice quante parti si prendono, il denominatore in quante parti è diviso l’intero."],
+[/\bfunzione\b/,"In matematica una funzione associa a ogni elemento di un insieme uno e un solo elemento di un altro. In informatica è un blocco di codice riutilizzabile che può ricevere dati e restituire un risultato."],
+/* informatica */
+[/algoritmo/,"Un algoritmo è una sequenza finita di istruzioni precise che permette di risolvere un problema o svolgere un compito."],
+[/variabile/,"In programmazione una variabile è uno spazio di memoria con un nome, dove si conserva un valore che può cambiare."],
+[/\bcicl[oi]\b|\bloop\b/,"Un ciclo è una struttura di programmazione che ripete un blocco di istruzioni finché una condizione è vera, come i cicli for e while."],
+[/\bbit\b|\bbyte\b|sistema binario|\bbinario\b/,"Il bit è l’unità minima di informazione e vale zero o uno. Un byte è formato da otto bit e può rappresentare 256 valori diversi. I computer lavorano in sistema binario."],
+[/\bcpu\b|processore/,"La CPU è il processore: il cuore del computer, che esegue le istruzioni dei programmi."],
+[/\bram\b/,"La RAM è la memoria veloce e temporanea in cui il computer tiene i dati dei programmi in uso. Si svuota quando lo spegni."],
+[/sistema operativo/,"Il sistema operativo, come Windows, Linux, iOS o Android, gestisce l’hardware e permette ai programmi di funzionare."],
+[/indirizzo ip|\bip\b/,"L’indirizzo IP è il numero che identifica un dispositivo in una rete, come un indirizzo di casa per i computer."],
+[/database|base di dati/,"Un database è un insieme organizzato di dati, archiviati in modo da poterli cercare, aggiornare e gestire in modo efficiente."],
+[/rete neurale|reti neurali/,"Una rete neurale artificiale è un modello di calcolo ispirato al cervello, formato da tanti nodi collegati che imparano a riconoscere schemi dai dati."],
+[/machine learning|apprendimento automatico/,"Il machine learning è un ramo dell’intelligenza artificiale in cui i computer imparano dai dati, senza essere programmati per ogni singolo caso."],
+[/intelligenza artificiale|\bia\b/,"L’intelligenza artificiale è il campo dell’informatica che crea sistemi capaci di compiti che richiedono intelligenza, come capire il linguaggio o riconoscere immagini."],
+[/\bpython\b/,"Python è un linguaggio di programmazione semplice e molto diffuso, usato per siti web, automazione, scienza dei dati e intelligenza artificiale."],
+[/\bhtml\b/,"HTML è il linguaggio che descrive la struttura delle pagine web: titoli, paragrafi, immagini e link."],
+[/\bcloud\b/,"Il cloud è l’uso di computer remoti, collegati a internet, per archiviare dati e far girare programmi invece di usare solo il proprio dispositivo."],
+[/compilatore/,"Un compilatore è un programma che traduce il codice scritto dal programmatore in istruzioni che il computer può eseguire."],
+[/\bbug\b/,"Un bug è un errore in un programma che provoca un comportamento sbagliato o inatteso."],
+/* robotica */
+[/leggi della robotica|asimov/,"Le tre leggi della robotica di Isaac Asimov dicono: un robot non può far del male a un essere umano; deve obbedire agli ordini umani, tranne se vanno contro la prima legge; deve proteggere se stesso, se questo non va contro le prime due."],
+[/servomotore|\bservo\b/,"Un servomotore è un motore con un sensore di posizione e un circuito di controllo, che permette di portare un albero a un angolo preciso. È molto usato nei bracci robotici."],
+[/attuator/,"Un attuatore è il componente che fa muovere un robot, trasformando energia elettrica, idraulica o pneumatica in movimento. Un esempio sono i motori."],
+[/sensor/,"Un sensore è un dispositivo che misura una grandezza fisica, come distanza, luce, temperatura o inclinazione, e la trasforma in un segnale per il robot."],
+[/arduino/,"Arduino è una scheda con microcontrollore open source, facile da programmare, molto usata per progetti di elettronica e robotica."],
+[/raspberry/,"Raspberry Pi è un piccolo computer economico, grande come una carta di credito, usato per progetti di programmazione, domotica e robotica."],
+[/\bpid\b/,"Il controllo PID è un sistema di regolazione che corregge continuamente un errore usando tre termini: proporzionale, integrale e derivativo. Serve, per esempio, a mantenere stabile la velocità di un motore."],
+[/\bros\b/,"ROS, cioè Robot Operating System, è un insieme di librerie e strumenti open source per programmare i robot."],
+[/lidar/,"Il lidar è un sensore che misura le distanze con un raggio laser. I robot lo usano per costruire una mappa dell’ambiente."],
+[/encoder/,"Un encoder è un sensore che misura la rotazione di un albero. Serve a conoscere posizione e velocità di un motore."],
+[/microcontrollore/,"Un microcontrollore è un piccolo computer su un singolo chip, con processore, memoria e ingressi e uscite, pensato per controllare dispositivi."],
+[/\brobot\b|robotica/,"Un robot è una macchina programmabile che percepisce l’ambiente con dei sensori e agisce su di esso con degli attuatori. La robotica è la scienza che li progetta e li costruisce."],
+/* italiano */
+[/congiuntivo/,"Il congiuntivo è un modo verbale che esprime dubbio, desiderio, possibilità o opinione, come in: penso che tu abbia ragione."],
+[/\bverbo\b|\bverbi\b/,"Il verbo è la parte del discorso che indica un’azione, uno stato o un modo di essere. Cambia secondo modo, tempo, persona e numero."],
+[/sostantivo|\bnome\b/,"Il nome, o sostantivo, è la parte del discorso che indica persone, animali, cose, luoghi o idee."],
+[/aggettivo/,"L’aggettivo è la parte del discorso che accompagna il nome per descriverlo o precisarlo, per esempio: una casa grande."],
+[/avverbio/,"L’avverbio è una parte invariabile del discorso che modifica il significato di un verbo, di un aggettivo o di un altro avverbio, come in: parla lentamente."],
+[/analisi logica/,"L’analisi logica studia la funzione delle parole nella frase: soggetto, predicato, complementi, e così via."],
+[/analisi grammaticale/,"L’analisi grammaticale identifica la categoria di ogni parola, cioè se è un nome, un verbo, un aggettivo, un articolo, e ne indica le caratteristiche."],
+[/\barticol[oi]\b/,"L’articolo è la parte del discorso che precede il nome e ne indica genere e numero. Può essere determinativo, come il, lo, la, oppure indeterminativo, come un, uno, una."],
+[/pronome/,"Il pronome è la parte del discorso che sostituisce un nome, per evitare ripetizioni, come in: Maria arriva, lei è puntuale."]
+];
 
 function setMode(m){document.body.setAttribute("data-mode",m);$("modo").textContent=ETICHETTE[m]||"";}
 function stat(t){stato.textContent=t;}
@@ -110,37 +171,57 @@ function link(testo,url){var d=document.createElement("div");d.className="m j";v
 function tick(){var d=new Date();$("clock").textContent=("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)+":"+("0"+d.getSeconds()).slice(-2);}
 tick();setInterval(tick,1000);
 
+/* ---------- VOCE MASCHILE ---------- */
+var MASC=["luca","giorgio","diego","cosimo","marco","paolo","stefano","roberto","claudio","matteo"];
+var FEM=["alice","elsa","federica","paola","silvia","carla","chiara","emma","isabella","bianca","giulia","laura","lucia","sara","valentina","anna","eloisa"];
 function scegliVoce(){
   var vs=speechSynthesis.getVoices().filter(function(x){return x.lang.replace("_","-").toLowerCase().indexOf("it")===0;});
-  var pref=["luca","giorgio","diego","cosimo"];
-  for(var i=0;i<pref.length;i++){for(var j=0;j<vs.length;j++){if(vs[j].name.toLowerCase().indexOf(pref[i])>=0)return vs[j];}}
-  return vs[0];
+  var i,j;
+  for(i=0;i<MASC.length;i++){for(j=0;j<vs.length;j++){if(vs[j].name.toLowerCase().indexOf(MASC[i])>=0)return {v:vs[j],maschio:true};}}
+  for(j=0;j<vs.length;j++){
+    var n=vs[j].name.toLowerCase(),f=false;
+    for(i=0;i<FEM.length;i++){if(n.indexOf(FEM[i])>=0)f=true;}
+    if(!f)return {v:vs[j],maschio:true};
+  }
+  return {v:vs[0],maschio:false};
 }
 
 function fermaRec(){
   if(rec){rec.onstart=null;rec.onresult=null;rec.onend=null;rec.onerror=null;try{rec.abort();}catch(e){}rec=null;}
 }
 
+/* ---------- PARLARE E INTERROMPERE ---------- */
+function interrompi(){
+  parlaTok++;clearTimeout(timerFine);
+  try{speechSynthesis.cancel();}catch(e){}
+  speaking=false;svegliaFino=Date.now()+20000;
+  setMode("ascolto");stat("Ti ascolto…");
+  if(running&&!rec)setTimeout(avvia,200);
+}
+
 function parla(t){
   occupato=false;
-  agg(t,"j");speaking=true;setMode("parla");stat("Junior sta parlando…");
-  fermaRec();
+  agg(t,"j");speaking=true;setMode("parla");
+  stat(bargeIn?"Sto parlando… di’ “Junior” o tocca il nucleo per interrompermi":"Sto parlando…");
+  if(!bargeIn)fermaRec();else if(!rec&&running)setTimeout(avvia,500);
+  var tok=++parlaTok;
   var u=new SpeechSynthesisUtterance(t);u.lang="it-IT";
-  var v=scegliVoce();if(v)u.voice=v;
-  u.pitch=1.3;u.rate=1.08;u.volume=1;
+  var ve=scegliVoce();if(ve.v)u.voice=ve.v;
+  u.pitch=ve.maschio?0.95:0.7;u.rate=1.0;u.volume=1;
   var done=false;
   var fine=function(){
-    if(done)return;done=true;clearTimeout(timerFine);
+    if(done||tok!==parlaTok)return;done=true;clearTimeout(timerFine);
     speaking=false;svegliaFino=Date.now()+20000;
-    if(running){setMode("ascolto");setTimeout(avvia,500);}else{setMode("idle");}
+    if(running){setMode("ascolto");stat("In ascolto…");if(!rec)setTimeout(avvia,500);}else{setMode("idle");}
   };
   u.onend=fine;
   u.onerror=function(e){
+    if(tok!==parlaTok)return;
     if(e&&e.error&&e.error!=="interrupted"&&e.error!=="canceled")stat("Errore voce: "+e.error+" (controlla volume e tasto silenzioso)");
     fine();
   };
   clearTimeout(timerFine);
-  timerFine=setTimeout(fine,Math.max(3500,t.length*95+3000));
+  timerFine=setTimeout(fine,Math.max(3500,t.length*80+3000));
   try{speechSynthesis.cancel();speechSynthesis.speak(u);speechSynthesis.resume();}catch(e){stat("Errore voce: "+e.message);fine();}
 }
 
@@ -254,12 +335,53 @@ function meteo(citta){
   }).catch(function(){parla("Non riesco a controllare il meteo, forse manca internet.");});
 }
 
-function calcola(c){
+/* ---------- MATEMATICA ---------- */
+function N(s){return parseFloat(String(s).replace(",","."));}
+function nums(c){var m=c.match(/\d+(?:[.,]\d+)?/g);return m?m.map(N):[];}
+function F(x){x=Math.round(x*1e6)/1e6;return String(x).replace(".",",");}
+function mcdf(a,b){a=Math.abs(a);b=Math.abs(b);while(b){var t=b;b=a%b;a=t;}return a;}
+
+function matematica(c){
+  var n=nums(c),m,x;
+  var NUM="(\\d+(?:[.,]\\d+)?)";
+  if((m=c.match(new RegExp(NUM+"\\s*(?:per cento|percento|%)\\s*di\\s*"+NUM))))return "Il "+m[1]+" per cento di "+m[2]+" è "+F(N(m[1])*N(m[2])/100)+".";
+  if(/radice quadrata/.test(c)&&n.length)return "La radice quadrata di "+F(n[0])+" è "+F(Math.sqrt(n[0]))+".";
+  if(/radice cubica/.test(c)&&n.length)return "La radice cubica di "+F(n[0])+" è "+F(Math.cbrt(n[0]))+".";
+  if(/al quadrato/.test(c)&&n.length)return F(n[0])+" al quadrato fa "+F(n[0]*n[0])+".";
+  if(/al cubo/.test(c)&&n.length)return F(n[0])+" al cubo fa "+F(Math.pow(n[0],3))+".";
+  if((m=c.match(new RegExp(NUM+"\\s*(?:elevato\\s+alla|elevato\\s+a|alla)\\s*"+NUM))))return F(N(m[1]))+" elevato alla "+F(N(m[2]))+" fa "+F(Math.pow(N(m[1]),N(m[2])))+".";
+  if(/fattoriale/.test(c)&&n.length){
+    if(n[0]>20||n[0]<0||n[0]%1)return "Posso calcolare il fattoriale dei numeri interi da zero a venti.";
+    var f=1;for(x=2;x<=n[0];x++)f*=x;return "Il fattoriale di "+n[0]+" è "+f+".";
+  }
+  if((m=c.match(/(\d+)\s+è\s+(?:un\s+numero\s+)?primo/))){
+    var p=+m[1],pr=p>1;for(x=2;x*x<=p;x++){if(p%x===0){pr=false;break;}}
+    return p+(pr?" è un numero primo.":" non è un numero primo.");
+  }
+  if(/(mcd|massimo comun divisore)/.test(c)&&n.length>=2)return "Il massimo comun divisore tra "+n[0]+" e "+n[1]+" è "+mcdf(n[0],n[1])+".";
+  if(/(mcm|minimo comune multiplo)/.test(c)&&n.length>=2)return "Il minimo comune multiplo tra "+n[0]+" e "+n[1]+" è "+(n[0]*n[1]/mcdf(n[0],n[1]))+".";
+  if(/area del cerchio/.test(c)&&n.length)return "L’area del cerchio di raggio "+F(n[0])+" è "+F(Math.PI*n[0]*n[0])+".";
+  if(/circonferenza/.test(c)&&n.length)return "La circonferenza di raggio "+F(n[0])+" misura "+F(2*Math.PI*n[0])+".";
+  if(/area del quadrato/.test(c)&&n.length)return "L’area del quadrato di lato "+F(n[0])+" è "+F(n[0]*n[0])+".";
+  if(/area del rettangolo/.test(c)&&n.length>=2)return "L’area del rettangolo è "+F(n[0]*n[1])+".";
+  if(/area del triangolo/.test(c)&&n.length>=2)return "L’area del triangolo è "+F(n[0]*n[1]/2)+".";
+  if(/perimetro del quadrato/.test(c)&&n.length)return "Il perimetro del quadrato è "+F(4*n[0])+".";
+  if(/perimetro del rettangolo/.test(c)&&n.length>=2)return "Il perimetro del rettangolo è "+F(2*(n[0]+n[1]))+".";
+  if(/ipotenusa/.test(c)&&n.length>=2)return "L’ipotenusa misura "+F(Math.sqrt(n[0]*n[0]+n[1]*n[1]))+".";
+  if(/volume del cubo/.test(c)&&n.length)return "Il volume del cubo è "+F(Math.pow(n[0],3))+".";
+  if(/volume della sfera/.test(c)&&n.length)return "Il volume della sfera è "+F(4/3*Math.PI*Math.pow(n[0],3))+".";
+  if((m=c.match(new RegExp(NUM+"\\s*gradi\\s*(celsius|centigradi|fahrenheit).*?(celsius|centigradi|fahrenheit)")))){
+    var v=N(m[1]),da=m[2]==="fahrenheit",a=m[3]==="fahrenheit";
+    if(!da&&a)return F(v)+" gradi Celsius sono "+F(v*9/5+32)+" gradi Fahrenheit.";
+    if(da&&!a)return F(v)+" gradi Fahrenheit sono "+F((v-32)*5/9)+" gradi Celsius.";
+  }
+  if((m=c.match(/(\d+)\s+in\s+(binario|esadecimale)/)))return m[1]+" in "+m[2]+" si scrive "+(m[2]==="binario"?(+m[1]).toString(2):(+m[1]).toString(16).toUpperCase())+".";
   var s=c.replace(/quanto fa|quanto viene|calcola|fammi il calcolo di|quant['’]è/g,"")
    .replace(/\bpiù\b/g,"+").replace(/\bmeno\b/g,"-").replace(/\b(diviso|fratto)\b/g,"/").replace(/\b(per|volte|x)\b/g,"*")
    .replace(/(\d)\s*,\s*(\d)/g,"$1.$2").replace(/\s+/g,"");
-  if(!/^[\d+\-*\/().]+$/.test(s)||!/[+\-*\/]/.test(s)||!/\d/.test(s))return null;
-  try{var r=Function('"use strict";return ('+s+')')();if(typeof r==="number"&&isFinite(r))return Math.round(r*1e6)/1e6;}catch(e){}
+  if(/^[\d+\-*\/().]+$/.test(s)&&/[+\-*\/]/.test(s)&&/\d/.test(s)){
+    try{var r=Function('"use strict";return ('+s+')')();if(typeof r==="number"&&isFinite(r))return "Fa "+F(r)+".";}catch(e){}
+  }
   return null;
 }
 
@@ -272,7 +394,7 @@ function esegui(c,silenzioso){
   if(/\b(esci|stop|spegniti|arrivederci)\b/.test(c)){running=false;orb.textContent="AVVIA";parla("Ok, a dopo! Chiamami quando vuoi.");return;}
   if(/^(ciao|ehi|hey|salve)\b/.test(c))return parla("Ehi! Che si dice? Dimmi tutto!");
   if(/come stai/.test(c))return parla("Alla grande! Sono carico a mille. E tu?");
-  if(/come ti chiami|chi sei/.test(c))return parla("Sono Junior, il tuo assistente vocale. Il più figo in circolazione!");
+  if(/come ti chiami|chi sei/.test(c))return parla("Sono il tuo assistente vocale, il più figo in circolazione!");
   if(/\bgrazie\b/.test(c))return parla("Figurati! Quando vuoi.");
   if(/che ore sono|che ora è/.test(c))return parla("Sono le "+o.getHours()+" e "+("0"+o.getMinutes()).slice(-2)+". Il tempo vola!");
   if(/che giorno|data di oggi/.test(c))return parla("Oggi è "+GIORNI[o.getDay()]+" "+o.getDate()+" "+MESI[o.getMonth()]+" "+o.getFullYear());
@@ -295,7 +417,7 @@ function esegui(c,silenzioso){
     return parla("Ok, timer da "+nome+" partito! Tieni la pagina aperta.");
   }
 
-  if(/\b(meteo|tempo fa|temperatura|piove|previsioni)\b/.test(c)){
+  if(/\b(meteo|tempo fa|temperatura|piove|previsioni)\b/.test(c)&&!/gradi/.test(c)){
     var mm=c.match(/(?:meteo|tempo|temperatura|piove|previsioni).*?\b(?:a|ad|di|in|per|su)\s+(.+?)(?:\s+(?:oggi|adesso|ora|domani|stasera))?$/);
     var citta=mm?mm[1]:null;
     if(!citta){var x=c.match(/^(?:meteo|previsioni)\s+(.+)/);if(x)citta=x[1];}
@@ -306,9 +428,16 @@ function esegui(c,silenzioso){
     return meteo(citta);
   }
 
-  var r=calcola(c);
-  if(r!==null)return parla("Fa "+String(r).replace(".",","));
+  var mt=matematica(c);
+  if(mt)return parla(mt);
 
+  var def=/cos['’]è|cosa è|cosa sono|che cos|spiegami|definizione|significa|vuol dire|parlami|come funziona|a cosa serve|differenza/.test(c)||c.split(" ").length<=3;
+  if(def){for(var q=0;q<KB.length;q++){if(KB[q][0].test(c))return parla(KB[q][1]);}}
+
+  if(/significa|sinonimo|contrario di|definizione di/.test(c)){
+    var par=c.replace(/^.*(?:significa|sinonimo di|contrario di|definizione di)\s+/,"").replace(/[?!.]+$/,"").split(" ")[0];
+    if(par)link("Vocabolario: "+par,"https://it.wiktionary.org/wiki/"+encodeURIComponent(par));
+  }
   rispondiWeb(c);
 }
 
@@ -316,7 +445,7 @@ function elabora(t){
   if(occupato)return;
   agg(t,"t");
   if(attesaFn){var f=attesaFn;attesaFn=null;return f(t);}
-  var m=t.match(/giunior|iunior|juniore|junior/);
+  var m=t.match(WAKE);
   if(m){
     var c=t.slice(m.index+m[0].length).replace(/^[\s,.]+/,"");
     if(!c){attesaFn=esegui;parla("Dimmi!");}else esegui(c);
@@ -326,24 +455,29 @@ function elabora(t){
 }
 
 function avvia(){
-  if(!running||speaking||occupato)return;
+  if(!running||occupato||(speaking&&!bargeIn))return;
   fermaRec();
   try{
     rec=new SR();rec.lang="it-IT";rec.continuous=false;rec.interimResults=true;
     ultimaAttivita=Date.now();
     rec.onstart=function(){
-      ultimaAttivita=Date.now();setMode("ascolto");
+      ultimaAttivita=Date.now();
+      if(speaking)return;
+      setMode("ascolto");
       stat(Date.now()<svegliaFino?"Ti ascolto… continua pure, senza dire “Junior”":"In ascolto… di’ “Junior”");
     };
     rec.onresult=function(ev){
       ultimaAttivita=Date.now();
-      if(speaking||occupato)return;
+      if(occupato)return;
       for(var i=ev.resultIndex;i<ev.results.length;i++){
         var t=ev.results[i][0].transcript.toLowerCase().trim();
+        if(speaking){
+          if(WAKE.test(t)||/^(basta|fermati|zitto|silenzio)\b/.test(t))interrompi();else continue;
+        }
         if(ev.results[i].isFinal)elabora(t);else stat("Sento: "+t);
       }
     };
-    rec.onend=function(){if(running&&!speaking&&!occupato)setTimeout(avvia,300);};
+    rec.onend=function(){if(running&&!occupato&&(!speaking||bargeIn))setTimeout(avvia,300);};
     rec.onerror=function(e){
       var msg=null;
       if(e.error==="service-not-allowed")msg="Attiva la dettatura: Impostazioni > Generali > Tastiera > Abilita dettatura (e controlla che Siri sia attivo).";
@@ -356,18 +490,27 @@ function avvia(){
 }
 
 setInterval(function(){
-  if(running&&!speaking&&!occupato&&Date.now()-ultimaAttivita>8000)avvia();
+  if(running&&!occupato&&(!speaking||bargeIn)&&Date.now()-ultimaAttivita>8000)avvia();
 },2000);
 
 orb.addEventListener("click",function(){
-  try{var u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u);}catch(e){}
   if(!SR){stat("Questo browser non supporta il riconoscimento vocale. Usa Safari o Chrome.");return;}
+  if(running&&speaking){interrompi();return;}
+  try{var u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u);}catch(e){}
   if(running){running=false;fermaRec();setMode("idle");orb.textContent="AVVIA";stat("");return;}
   running=true;orb.textContent="STOP";
   avvia();
 });
 
-$("test").addEventListener("click",function(){parla("Yo! Sono Junior. Se mi senti, la voce funziona alla grande!");});
+$("test").addEventListener("click",function(){
+  parla("Yo! Eccomi. Se mi senti, la voce funziona alla grande!");
+  var ve=scegliVoce();
+  setTimeout(function(){stat("Voce: "+(ve.v?ve.v.name:"predefinita")+(ve.maschio?" (maschile)":" (nessuna voce maschile trovata: scarica Luca nelle impostazioni)"));},120);
+});
+$("bi").addEventListener("click",function(){
+  bargeIn=!bargeIn;this.textContent="✋ INTERRUZIONE: "+(bargeIn?"ON":"OFF");
+  stat(bargeIn?"Puoi interrompermi dicendo Junior.":"Interruzione vocale spenta: tocca il nucleo per interrompermi.");
+});
 $("invia").addEventListener("click",function(){var v=$("testo").value.toLowerCase().trim();if(v){agg(v,"t");$("testo").value="";esegui(v.replace(/^junior[\s,.]*/,""));}});
 var chips=document.querySelectorAll(".chip[data-c]");
 for(var k=0;k<chips.length;k++){chips[k].addEventListener("click",function(){esegui(this.getAttribute("data-c"));});}
