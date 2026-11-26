@@ -5,103 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Junior</title>
 <style>
-:root{--bg:#f4f5f7;--fg:#1a1c20;--card:#fff;--accent:#2563eb;--mute:#6b7280;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111317;--fg:#eceef2;--card:#1b1e24;--accent:#60a5fa;--mute:#9ca3af}}
-:root[data-theme="dark"]{--bg:#111317;--fg:#eceef2;--card:#1b1e24;--accent:#60a5fa;--mute:#9ca3af}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:24px 16px}
-h1{margin:8px 0 4px;font-size:2rem}
-p.sub{margin:0 0 20px;color:var(--mute);text-align:center}
-#btn{width:140px;height:140px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:1.1rem;font-weight:600}
-#btn.on{box-shadow:0 0 0 12px color-mix(in srgb,var(--accent) 25%,transparent)}
-#stato{margin:20px 0;color:var(--mute);min-height:1.4em;text-align:center}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:#fff;font-family:-apple-system,system-ui,"Segoe UI",sans-serif;background:radial-gradient(circle at 50% 0%,#3b1d8f 0%,#12082e 45%,#07041a 100%);display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px 24px}
+h1{margin:6px 0 0;font-size:2.4rem;letter-spacing:2px;background:linear-gradient(90deg,#22d3ee,#a78bfa,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin:4px 0 22px;color:#b9a9ff;text-align:center}
+#orb{width:170px;height:170px;border-radius:50%;border:0;color:#fff;font-size:1.15rem;font-weight:800;letter-spacing:1px;background:radial-gradient(circle at 35% 30%,#a78bfa,#5b21b6 70%);box-shadow:0 0 40px #7c3aed88;transition:.3s}
+body[data-mode="ascolto"] #orb{background:radial-gradient(circle at 35% 30%,#67e8f9,#0891b2 70%);animation:pulsa 1.4s infinite}
+body[data-mode="parla"] #orb{background:radial-gradient(circle at 35% 30%,#f9a8d4,#db2777 70%);animation:pulsa .6s infinite}
+@keyframes pulsa{0%{box-shadow:0 0 0 0 #22d3ee99,0 0 40px #22d3ee66}70%{box-shadow:0 0 0 40px #22d3ee00,0 0 60px #22d3ee66}100%{box-shadow:0 0 0 0 #22d3ee00,0 0 40px #22d3ee66}}
+#stato{margin:22px 0 10px;color:#c4b5fd;min-height:1.4em;text-align:center;max-width:520px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:560px;margin-bottom:14px}
+.chip{border:1px solid #7c3aed;background:#1e1146;color:#e9e3ff;border-radius:999px;padding:9px 14px;font-size:.95rem}
+.riga{display:flex;gap:8px;width:100%;max-width:560px;margin-bottom:14px}
+#testo{flex:1;border-radius:14px;border:1px solid #4c1d95;background:#150b38;color:#fff;padding:12px;font-size:1rem}
+.riga button{border:0;border-radius:14px;background:#7c3aed;color:#fff;padding:0 18px;font-weight:700}
 #log{width:100%;max-width:560px;display:flex;flex-direction:column;gap:8px}
-.m{background:var(--card);padding:10px 14px;border-radius:12px;max-width:85%}
-.j{align-self:flex-start}.t{align-self:flex-end;border:1px solid var(--accent)}
+.m{padding:10px 14px;border-radius:16px;max-width:88%}
+.j{align-self:flex-start;background:#2a1565;border:1px solid #6d28d9}
+.t{align-self:flex-end;background:#083344;border:1px solid #0891b2}
 </style>
 </head>
-<body>
-<h1>Junior</h1>
-<p class="sub">Tocca Avvia e di’: “Junior, che ore sono?”</p>
-<button id="btn">Avvia</button>
+<body data-mode="idle">
+<h1>JUNIOR</h1>
+<p class="sub">Tocca la sfera e di’: “Junior, che ore sono?”</p>
+<button id="orb">AVVIA</button>
 <div id="stato"></div>
+<div class="chips">
+  <button class="chip" data-c="che ore sono">⏰ Ora</button>
+  <button class="chip" data-c="raccontami una barzelletta">😂 Barzelletta</button>
+  <button class="chip" data-c="tira un dado">🎲 Dado</button>
+  <button class="chip" data-c="lancia una moneta">🪙 Moneta</button>
+  <button class="chip" id="test">🔊 Test voce</button>
+</div>
+<div class="riga"><input id="testo" placeholder="Oppure scrivi qui…"><button id="invia">Invia</button></div>
 <div id="log"></div>
 <script>
-var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-var btn = document.getElementById("btn"), stato = document.getElementById("stato"), logEl = document.getElementById("log");
-var rec = null, running = false, speaking = false, attesa = false;
-var GIORNI = ["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
-var MESI = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
-var BARZ = ["Sai perché il computer va dal dottore? Perché ha un virus!","Qual è il colmo per un elettricista? Non avere corrente di pensiero!","Cosa fa un gatto in autostrada? Il gatto di marcia!"];
-
-function stat(t){stato.textContent=t;}
-function aggiungi(testo, cls){
-  var d=document.createElement("div");d.className="m "+cls;d.textContent=testo;
-  logEl.insertBefore(d,logEl.firstChild);
-  while(logEl.children.length>6)logEl.removeChild(logEl.lastChild);
-}
-
-function parla(testo){
-  aggiungi(testo,"j"); speaking=true;
-  try{rec.stop();}catch(e){}
-  var u=new SpeechSynthesisUtterance(testo); u.lang="it-IT";
-  var v=speechSynthesis.getVoices().filter(function(x){return x.lang.indexOf("it")===0;})[0]; if(v)u.voice=v;
-  u.onend=u.onerror=function(){speaking=false; if(running)setTimeout(avvia,300);};
-  speechSynthesis.speak(u);
-}
-
-function esegui(c){
-  var o=new Date();
-  if(/esci|arrivederci|spegniti|ciao/.test(c)){parla("A presto!");running=false;btn.textContent="Avvia";btn.className="";stat("");return;}
-  if(/che ore sono|che ora è/.test(c)) return parla("Sono le "+o.getHours()+" e "+("0"+o.getMinutes()).slice(-2));
-  if(/che giorno|data di oggi/.test(c)) return parla("Oggi è "+GIORNI[o.getDay()]+" "+o.getDate()+" "+MESI[o.getMonth()]+" "+o.getFullYear());
-  if(/barzelletta/.test(c)) return parla(BARZ[Math.floor(Math.random()*BARZ.length)]);
-  if(/apri youtube/.test(c)){parla("Apro YouTube");return window.open("https://www.youtube.com","_blank");}
-  var m=c.match(/^(riproduci|metti|suona)\s+(.+)/);
-  if(m){parla("Cerco "+m[2]+" su YouTube");return window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(m[2]),"_blank");}
-  m=c.match(/^(cerca|cercami|chi è|cos’è|cos'è|che cos’è)\s*(.+)/);
-  if(m){parla("Cerco "+m[2]+" su Google");return window.open("https://www.google.com/search?q="+encodeURIComponent(m[2]),"_blank");}
-  parla("Non ho capito, puoi ripetere?");
-}
-
-function avvia(){try{rec.start();}catch(e){}}
-
-function elabora(t){
-  aggiungi(t,"t");
-  if(attesa){attesa=false;return esegui(t);}
-  var i=t.indexOf("junior"); if(i<0)return;
-  var c=t.slice(i+6).replace(/^[\s,.]+/,"");
-  if(!c){attesa=true;parla("Dimmi");}else esegui(c);
-}
-
-function init(){
-  rec=new SR(); rec.lang="it-IT"; rec.continuous=false; rec.interimResults=true;
-  rec.onstart=function(){stat("In ascolto… di’ “Junior”");};
-  rec.onresult=function(ev){
-    if(speaking)return;
-    for(var i=ev.resultIndex;i<ev.results.length;i++){
-      var t=ev.results[i][0].transcript.toLowerCase().trim();
-      if(ev.results[i].isFinal)elabora(t); else stat("Sento: "+t);
-    }
-  };
-  rec.onend=function(){if(running&&!speaking)setTimeout(avvia,200);};
-  rec.onerror=function(e){
-    var msg=null;
-    if(e.error==="service-not-allowed")msg="Attiva la dettatura: Impostazioni > Generali > Tastiera > Abilita dettatura (e controlla che Siri sia attivo).";
-    else if(e.error==="not-allowed")msg="Microfono bloccato. Consenti il microfono per questo sito nelle impostazioni di Safari.";
-    else if(e.error==="network")msg="Serve una connessione internet.";
-    if(msg){stat(msg);running=false;btn.className="";btn.textContent="Avvia";}
-  };
-}
-
-btn.onclick=function(){
-  if(!SR){stat("Il tuo browser non supporta il riconoscimento vocale. Usa Safari o Chrome.");return;}
-  if(running){running=false;try{rec.stop();}catch(e){}btn.textContent="Avvia";btn.className="";stat("");return;}
-  if(!rec)init();
-  running=true; btn.textContent="Stop"; btn.className="on";
-  avvia(); // deve partire subito dal tocco (regola di Safari)
-  try{var u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u);}catch(e){} // sblocca la voce
-};
-</script>
-</body>
-</html>
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+var $=function(i){return document.getElementById(i);};
+var orb=$("orb"),stato=$("stato"),logEl=$("log");
+var rec=null,running=false,speaking=false,attesa=false,listening=false,svegliaFino=0,timerFine=null;
+var GIORNI=["dom
