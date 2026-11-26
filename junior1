@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Junior</title>
+<style>
+:root{--bg:#f4f5f7;--fg:#1a1c20;--card:#fff;--accent:#2563eb;--mute:#6b7280;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111317;--fg:#eceef2;--card:#1b1e24;--accent:#60a5fa;--mute:#9ca3af}}
+:root[data-theme="dark"]{--bg:#111317;--fg:#eceef2;--card:#1b1e24;--accent:#60a5fa;--mute:#9ca3af}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,system-ui,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:24px 16px}
+h1{margin:8px 0 4px;font-size:2rem}
+p.sub{margin:0 0 24px;color:var(--mute);text-align:center}
+#btn{width:140px;height:140px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:1.1rem;font-weight:600}
+#btn.on{box-shadow:0 0 0 12px color-mix(in srgb,var(--accent) 25%,transparent)}
+#stato{margin:20px 0;color:var(--mute);min-height:1.4em;text-align:center}
+#log{width:100%;max-width:560px;display:flex;flex-direction:column;gap:8px}
+.m{background:var(--card);padding:10px 14px;border-radius:12px;max-width:85%}
+.j{align-self:flex-start}.t{align-self:flex-end;border:1px solid var(--accent)}
+</style>
+</head>
+<body>
+<h1>Junior</h1>
+<p class="sub">Tocca il pulsante e di’: “Junior, che ore sono?”</p>
+<button id="btn">Avvia</button>
+<div id="stato"></div>
+<div id="log"></div>
+<script>
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+var btn = document.getElementById("btn"), stato = document.getElementById("stato"), logEl = document.getElementById("log");
+var rec = null, running = false, speaking = false, attesa = false;
+var GIORNI = ["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
+var MESI = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+var BARZ = ["Sai perché il computer va dal dottore? Perché ha un virus!","Qual è il colmo per un elettricista? Non avere corrente di pensiero!","Cosa fa un gatto in autostrada? Il gatto di marcia!"];
+
+function aggiungi(testo, cls){var d=document.createElement("div");d.className="m "+cls;d.textContent=testo;logEl.appendChild(d);window.scrollTo(0,document.body.scrollHeight);}
+
+function parla(testo){
+  aggiungi(testo,"j"); speaking=true;
+  try{rec.stop();}catch(e){}
+  speechSynthesis.cancel();
+  var u=new SpeechSynthesisUtterance(testo); u.lang="it-IT";
+  var v=speechSynthesis.getVoices().filter(function(x){return x.lang.indexOf("it")===0;})[0]; if(v)u.voice=v;
+  u.onend=u.onerror=function(){speaking=false; if(running)avvia();};
+  speechSynthesis.speak(u);
+}
+
+function esegui(c){
+  var o=new Date();
+  if(/esci|arrivederci|spegniti|ciao/.test(c)){parla("A presto!");running=false;btn.textContent="Avvia";btn.className="";stato.textContent="";return;}
+  if(/che ore sono|che ora è/.test(c)) return parla("Sono le "+o.getHours()+" e "+("0"+o.getMinutes()).slice(-2));
+  if(/che giorno|data di oggi/.test(c)) return parla("Oggi è "+GIORNI[o.getDay()]+" "+o.getDate()+" "+MESI[o.getMonth()]+" "+o.getFullYear());
+  if(/barzelletta/.test(c)) return parla(BARZ[Math.floor(Math.random()*BARZ.length)]);
+  if(/apri youtube/.test(c)){parla("Apro YouTube");return window.open("https://www.youtube.com","_blank");}
+  var m=c.match(/^(riproduci|metti|suona)\s+(.+)/);
+  if(m){parla("Cerco "+m[2]+" su YouTube");return window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(m[2]),"_blank");}
+  m=c.match(/^(cerca|cercami|chi è|cos’è|cos'è|che cos’è)\s*(.+)/);
+  if(m){parla("Cerco "+m[2]+" su Google");return window.open("https://www.google.com/search?q="+encodeURIComponent(m[2]),"_blank");}
+  parla("Non ho capito, puoi ripetere?");
+}
+
+function avvia(){try{rec.start();stato.textContent="In ascolto… di’ “Junior”";}catch(e){}}
+
+function init(){
+  rec=new SR(); rec.lang="it-IT"; rec.continuous=true; rec.interimResults=false;
+  rec.onresult=function(ev){
+    var t=ev.results[ev.results.length-1][0].transcript.toLowerCase().trim();
+    if(speaking)return; aggiungi(t,"t");
+    if(attesa){attesa=false;return esegui(t);}
+    var i=t.indexOf("junior"); if(i<0)return;
+    var c=t.slice(i+6).replace(/^[\s,.]+/,"");
+    if(!c){attesa=true;parla("Dimmi");}else esegui(c);
+  };
+  rec.onend=function(){if(running&&!speaking)avvia();};
+  rec.onerror=function(e){
+    var msg=null;
+    if(e.error==="service-not-allowed")msg="Attiva la dettatura: Impostazioni > Generali > Tastiera > Abilita dettatura (e controlla che Siri sia attivo).";
+    else if(e.error==="not-allowed")msg="Microfono bloccato. Consenti il microfono per questo sito nelle impostazioni di Safari.";
+    else if(e.error==="network")msg="Serve una connessione internet.";
+    if(msg){stato.textContent=msg;running=false;btn.className="";btn.textContent="Avvia";}
+  };
+}
+
+function chiediMic(){
+  var ok=function(){
+    try{if(navigator.wakeLock)navigator.wakeLock.request("screen").catch(function(){});}catch(e){}
+    parla("Ciao, sono Junior. Chiamami quando hai bisogno.");
+  };
+  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({audio:true})
+      .then(function(s){s.getTracks().forEach(function(t){t.stop();});ok();})
+      .catch(function(){rec.onerror({error:"not-allowed"});});
+  }else ok();
+}
+
+btn.onclick=function(){
+  if(!SR){stato.textContent="Il tuo browser non supporta il riconoscimento vocale. Usa Safari o Chrome.";return;}
+  if(running){running=false;try{rec.stop();}catch(e){}btn.textContent="Avvia";btn.className="";stato.textContent="";return;}
+  if(!rec)init(); running=true; btn.textContent="Stop"; btn.className="on";
+  chiediMic();
+};
+</script>
+</body>
+</html>
