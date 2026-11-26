@@ -8,7 +8,9 @@
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;color:#fff;font-family:-apple-system,system-ui,"Segoe UI",sans-serif;background:radial-gradient(circle at 50% 0%,#3b1d8f 0%,#12082e 45%,#07041a 100%);display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px 24px}
 h1{margin:6px 0 0;font-size:2.4rem;letter-spacing:2px;background:linear-gradient(90deg,#22d3ee,#a78bfa,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ver{font-size:.75rem;color:#7c6bd6;margin:2px 0}
 .sub{margin:4px 0 22px;color:#b9a9ff;text-align:center}
+#err{display:none;background:#7f1d1d;color:#fff;padding:10px 14px;border-radius:12px;margin-bottom:12px;max-width:560px;font-size:.9rem}
 #orb{width:170px;height:170px;border-radius:50%;border:0;color:#fff;font-size:1.15rem;font-weight:800;letter-spacing:1px;background:radial-gradient(circle at 35% 30%,#a78bfa,#5b21b6 70%);box-shadow:0 0 40px #7c3aed88;transition:.3s}
 body[data-mode="ascolto"] #orb{background:radial-gradient(circle at 35% 30%,#67e8f9,#0891b2 70%);animation:pulsa 1.4s infinite}
 body[data-mode="parla"] #orb{background:radial-gradient(circle at 35% 30%,#f9a8d4,#db2777 70%);animation:pulsa .6s infinite}
@@ -26,15 +28,21 @@ body[data-mode="parla"] #orb{background:radial-gradient(circle at 35% 30%,#f9a8d
 </style>
 </head>
 <body data-mode="idle">
+<div id="err"></div>
+<script>
+window.onerror=function(m,s,l){var e=document.getElementById("err");if(e){e.style.display="block";e.textContent="Errore: "+m+" (riga "+l+")";}};
+</script>
 <h1>JUNIOR</h1>
-<p class="sub">Tocca la sfera e di’: “Junior, che ore sono?”</p>
+<div class="ver">v7</div>
+<p class="sub">Tocca la sfera e chiedimi qualsiasi cosa: “Junior, chi era Napoleone?”</p>
 <button id="orb">AVVIA</button>
 <div id="stato"></div>
 <div class="chips">
   <button class="chip" data-c="che ore sono">⏰ Ora</button>
+  <button class="chip" data-c="che tempo fa a Roma">🌦️ Meteo</button>
+  <button class="chip" data-c="dimmi una curiosità">💡 Curiosità</button>
   <button class="chip" data-c="raccontami una barzelletta">😂 Barzelletta</button>
   <button class="chip" data-c="tira un dado">🎲 Dado</button>
-  <button class="chip" data-c="lancia una moneta">🪙 Moneta</button>
   <button class="chip" id="test">🔊 Test voce</button>
 </div>
 <div class="riga"><input id="testo" placeholder="Oppure scrivi qui…"><button id="invia">Invia</button></div>
@@ -43,14 +51,16 @@ body[data-mode="parla"] #orb{background:radial-gradient(circle at 35% 30%,#f9a8d
 var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 var $=function(i){return document.getElementById(i);};
 var orb=$("orb"),stato=$("stato"),logEl=$("log");
-var rec=null,running=false,speaking=false,attesa=false,listening=false,svegliaFino=0,timerFine=null;
+var rec=null,running=false,speaking=false,attesaFn=null,occupato=false,svegliaFino=0,timerFine=null,ultimaAttivita=0;
 var GIORNI=["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
 var MESI=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 var BARZ=["Sai perché il computer va dal dottore? Perché ha un virus!","Qual è il colmo per un elettricista? Non avere corrente di pensiero!","Cosa fa un gatto in autostrada? Il gatto di marcia!","Perché il pomodoro non riesce a dormire? Perché ha la pelle rossa e il sugo agitato!"];
 
 function setMode(m){document.body.setAttribute("data-mode",m);}
 function stat(t){stato.textContent=t;}
-function agg(t,c){var d=document.createElement("div");d.className="m "+c;d.textContent=t;logEl.insertBefore(d,logEl.firstChild);while(logEl.children.length>6)logEl.removeChild(logEl.lastChild);}
+function pota(){while(logEl.children.length>8)logEl.removeChild(logEl.lastChild);}
+function agg(t,c){var d=document.createElement("div");d.className="m "+c;d.textContent=t;logEl.insertBefore(d,logEl.firstChild);pota();}
+function link(testo,url){var d=document.createElement("div");d.className="m j";var a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";a.textContent="🔗 "+testo;a.style.color="#67e8f9";d.appendChild(a);logEl.insertBefore(d,logEl.firstChild);pota();}
 
 function scegliVoce(){
   var vs=speechSynthesis.getVoices().filter(function(x){return x.lang.replace("_","-").toLowerCase().indexOf("it")===0;});
@@ -59,14 +69,14 @@ function scegliVoce(){
   return vs[0];
 }
 
-// sblocca la voce dentro il tocco (obbligatorio su iPad)
-function sblocca(){
-  try{var u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u);speechSynthesis.resume();}catch(e){}
+function fermaRec(){
+  if(rec){rec.onstart=null;rec.onresult=null;rec.onend=null;rec.onerror=null;try{rec.abort();}catch(e){}rec=null;}
 }
 
 function parla(t){
+  occupato=false;
   agg(t,"j");speaking=true;setMode("parla");stat("Junior sta parlando…");
-  try{if(rec)rec.abort();}catch(e){}
+  fermaRec();
   var u=new SpeechSynthesisUtterance(t);u.lang="it-IT";
   var v=scegliVoce();if(v)u.voice=v;
   u.pitch=1.3;u.rate=1.08;u.volume=1;
@@ -74,95 +84,213 @@ function parla(t){
   var fine=function(){
     if(done)return;done=true;clearTimeout(timerFine);
     speaking=false;svegliaFino=Date.now()+20000;
-    if(running){setMode("ascolto");setTimeout(avvia,400);}else{setMode("idle");}
+    if(running){setMode("ascolto");setTimeout(avvia,500);}else{setMode("idle");}
   };
   u.onend=fine;
-  u.onerror=function(e){stat("Errore voce: "+(e.error||"sconosciuto")+" — controlla volume e tasto silenzioso");fine();};
+  u.onerror=function(e){
+    if(e&&e.error&&e.error!=="interrupted"&&e.error!=="canceled")stat("Errore voce: "+e.error+" (controlla volume e tasto silenzioso)");
+    fine();
+  };
   clearTimeout(timerFine);
-  timerFine=setTimeout(fine,Math.max(3000,t.length*95+2500));
-  try{
-    if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel();
-    speechSynthesis.speak(u); // subito, senza ritardi
-    speechSynthesis.resume();
-  }catch(e){stat("Errore voce: "+e.message);fine();}
+  timerFine=setTimeout(fine,Math.max(3500,t.length*95+3000));
+  try{speechSynthesis.cancel();speechSynthesis.speak(u);speechSynthesis.resume();}catch(e){stat("Errore voce: "+e.message);fine();}
 }
 
+/* ---------- INTERNET ---------- */
+function frasi(t,n){
+  t=t.replace(/\([^)]*\)/g,"").replace(/\s+/g," ").trim();
+  var m=t.match(/[^.!?]+[.!?]+/g);
+  if(!m)return t.slice(0,260);
+  var r=m.slice(0,n).join(" ").trim();
+  return r.length>420?m[0].trim():r;
+}
+
+function wiki(q){
+  var url="https://it.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch="+encodeURIComponent(q)+"&gsrlimit=1&prop=extracts&exintro=1&explaintext=1";
+  return fetch(url).then(function(r){return r.json();}).then(function(d){
+    if(!d.query||!d.query.pages)return null;
+    var p=d.query.pages[Object.keys(d.query.pages)[0]];
+    if(!p||!p.extract)return null;
+    return {titolo:p.title,testo:frasi(p.extract,2)};
+  });
+}
+
+function pulisci(c){
+  return c
+   .replace(/^(per favore|dimmi|puoi dirmi|sai dirmi|mi dici|dammi informazioni su|parlami di|raccontami di|raccontami|spiegami|cerca|cercami)\s+/,"")
+   .replace(/^(chi (è|era|sono|erano)|che cos['’]è|cos['’]è|cosa (è|sono)|che cosa (è|sono)|cosa significa|che significa|cosa vuol dire|qual è|quale è|quali sono|dove si trova|dov['’]è|di cosa si tratta)\s+/,"")
+   .replace(/^(il|lo|la|l['’]|un|una|i|gli|le)\s*/,"")
+   .replace(/[?!.]+$/,"").trim();
+}
+
+function rispondiWeb(c){
+  var q=pulisci(c);if(!q)q=c;
+  occupato=true;stat("Cerco online: "+q+"…");
+  wiki(q).then(function(r){
+    if(!r){
+      link("Cerca su Google: "+q,"https://www.google.com/search?q="+encodeURIComponent(q));
+      return parla("Non ho trovato una risposta precisa. Tocca il link per cercare su Google.");
+    }
+    link("Leggi di più: "+r.titolo,"https://it.wikipedia.org/wiki/"+encodeURIComponent(r.titolo.replace(/ /g,"_")));
+    parla(r.testo);
+  }).catch(function(){parla("Non riesco a collegarmi a internet.");});
+}
+
+function curiosita(){
+  occupato=true;stat("Cerco una curiosità…");
+  fetch("https://it.wikipedia.org/api/rest_v1/page/random/summary").then(function(r){return r.json();}).then(function(d){
+    link("Leggi di più: "+d.title,"https://it.wikipedia.org/wiki/"+encodeURIComponent(d.title.replace(/ /g,"_")));
+    parla("Lo sapevi? "+d.title+". "+frasi(d.extract||"",1));
+  }).catch(function(){parla("Non riesco a collegarmi a internet.");});
+}
+
+function descr(k){
+  if(k===0)return "cielo sereno";
+  if(k<=2)return "poco nuvoloso";
+  if(k===3)return "cielo coperto";
+  if(k===45||k===48)return "nebbia";
+  if(k>=51&&k<=57)return "pioggerella";
+  if(k>=61&&k<=67)return "pioggia";
+  if(k>=71&&k<=77)return "neve";
+  if(k>=80&&k<=82)return "rovesci";
+  if(k>=95)return "temporale";
+  return "tempo variabile";
+}
+
+function meteo(citta){
+  occupato=true;stat("Controllo il meteo a "+citta+"…");
+  fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(citta)+"&count=1&language=it&format=json")
+  .then(function(r){return r.json();}).then(function(g){
+    if(!g.results||!g.results.length){return parla("Non trovo la città "+citta+".");}
+    var p=g.results[0];
+    return fetch("https://api.open-meteo.com/v1/forecast?latitude="+p.latitude+"&longitude="+p.longitude+"&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto")
+    .then(function(r){return r.json();}).then(function(w){
+      var k=w.current;
+      parla("A "+p.name+" la temperatura è di "+Math.round(k.temperature_2m)+" gradi, "+descr(k.weather_code)+". Vento a "+Math.round(k.wind_speed_10m)+" chilometri orari.");
+    });
+  }).catch(function(){parla("Non riesco a controllare il meteo, forse manca internet.");});
+}
+
+function calcola(c){
+  var s=c.replace(/quanto fa|quanto viene|calcola|fammi il calcolo di|quant['’]è/g,"")
+   .replace(/\bpiù\b/g,"+").replace(/\bmeno\b/g,"-").replace(/\b(diviso|fratto)\b/g,"/").replace(/\b(per|volte|x)\b/g,"*")
+   .replace(/(\d)\s*,\s*(\d)/g,"$1.$2").replace(/\s+/g,"");
+  if(!/^[\d+\-*\/().]+$/.test(s)||!/[+\-*\/]/.test(s)||!/\d/.test(s))return null;
+  try{var r=Function('"use strict";return ('+s+')')();if(typeof r==="number"&&isFinite(r))return Math.round(r*1e6)/1e6;}catch(e){}
+  return null;
+}
+
+/* ---------- COMANDI ---------- */
 function esegui(c,silenzioso){
   var o=new Date(),m;
-  if(/esci|stop|spegniti|arrivederci/.test(c)){running=false;parla("Ok, a dopo! Chiamami quando vuoi.");orb.textContent="AVVIA";return;}
-  if(/^(ciao|ehi|hey|salve)/.test(c))return parla("Ehi! Che si dice? Dimmi tutto!");
+  c=c.trim();if(!c)return;
+  if(silenzioso&&c.split(" ").length<2)return;
+  if(/\b(esci|stop|spegniti|arrivederci)\b/.test(c)){running=false;orb.textContent="AVVIA";parla("Ok, a dopo! Chiamami quando vuoi.");return;}
+  if(/^(ciao|ehi|hey|salve)\b/.test(c))return parla("Ehi! Che si dice? Dimmi tutto!");
   if(/come stai/.test(c))return parla("Alla grande! Sono carico a mille. E tu?");
   if(/come ti chiami|chi sei/.test(c))return parla("Sono Junior, il tuo assistente vocale. Il più figo in circolazione!");
-  if(/grazie/.test(c))return parla("Figurati! Quando vuoi.");
+  if(/\bgrazie\b/.test(c))return parla("Figurati! Quando vuoi.");
   if(/che ore sono|che ora è/.test(c))return parla("Sono le "+o.getHours()+" e "+("0"+o.getMinutes()).slice(-2)+". Il tempo vola!");
   if(/che giorno|data di oggi/.test(c))return parla("Oggi è "+GIORNI[o.getDay()]+" "+o.getDate()+" "+MESI[o.getMonth()]+" "+o.getFullYear());
-  if(/barzelletta/.test(c))return parla(BARZ[Math.floor(Math.random()*BARZ.length)]);
-  if(/dado/.test(c))return parla("Ho tirato il dado ed è uscito "+(Math.floor(Math.random()*6)+1)+"!");
-  if(/moneta/.test(c))return parla(Math.random()<0.5?"Testa!":"Croce!");
-  if(/apri youtube/.test(c)){parla("Boom, apro YouTube!");return window.open("https://www.youtube.com","_blank");}
+  if(/\bbarzelletta\b/.test(c))return parla(BARZ[Math.floor(Math.random()*BARZ.length)]);
+  if(/\bdado\b/.test(c))return parla("Ho tirato il dado ed è uscito "+(Math.floor(Math.random()*6)+1)+"!");
+  if(/\bmoneta\b/.test(c))return parla(Math.random()<0.5?"Testa!":"Croce!");
+  if(/curiosit|sapevi che|qualcosa di interessante/.test(c))return curiosita();
+  if(/apri youtube/.test(c)){link("Apri YouTube","https://www.youtube.com");return parla("Ecco YouTube! Tocca il link.");}
   m=c.match(/^(riproduci|metti|suona)\s+(.+)/);
-  if(m){parla("Ti cerco "+m[2]+" su YouTube!");return window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(m[2]),"_blank");}
-  m=c.match(/^(cerca|cercami|chi è|cos’è|cos'è|che cos’è)\s*(.+)/);
-  if(m){parla("Cerco "+m[2]+" su Google!");return window.open("https://www.google.com/search?q="+encodeURIComponent(m[2]),"_blank");}
-  if(!silenzioso)parla("Boh, non ho capito. Riprova!");
+  if(m){link("Cerca "+m[2]+" su YouTube","https://www.youtube.com/results?search_query="+encodeURIComponent(m[2]));return parla("Ti cerco "+m[2]+" su YouTube! Tocca il link.");}
+  m=c.match(/^(?:cerca|cercami)\s+(?:su\s+)?google\s+(.+)/);
+  if(m){link("Cerca "+m[1]+" su Google","https://www.google.com/search?q="+encodeURIComponent(m[1]));return parla("Ecco la ricerca su Google! Tocca il link.");}
+
+  // timer
+  var cc=c.replace(/\bun(a)?\s+(?=(second|minut|or))/,"1 ");
+  m=cc.match(/(\d+)\s*(second|minut|or)/);
+  if(/timer|conto alla rovescia|sveglia/.test(c)&&m){
+    var n=+m[1],u=m[2],ms=n*(u==="second"?1000:u==="minut"?60000:3600000);
+    var nome=n+(u==="second"?" secondi":u==="minut"?" minuti":" ore");
+    setTimeout(function(){parla("Ehi! Il timer da "+nome+" è scaduto!");},ms);
+    return parla("Ok, timer da "+nome+" partito! Tieni la pagina aperta.");
+  }
+
+  // meteo
+  if(/\b(meteo|tempo fa|temperatura|piove|previsioni)\b/.test(c)){
+    var mm=c.match(/(?:meteo|tempo|temperatura|piove|previsioni).*?\b(?:a|ad|di|in|per|su)\s+(.+?)(?:\s+(?:oggi|adesso|ora|domani|stasera))?$/);
+    var citta=mm?mm[1]:null;
+    if(!citta){var x=c.match(/^(?:meteo|previsioni)\s+(.+)/);if(x)citta=x[1];}
+    if(!citta){
+      attesaFn=function(t){meteo(t.replace(/^(a|ad|di|in)\s+/,""));};
+      return parla("Di quale città vuoi il meteo?");
+    }
+    return meteo(citta);
+  }
+
+  // calcoli
+  var r=calcola(c);
+  if(r!==null)return parla("Fa "+String(r).replace(".",","));
+
+  // tutto il resto: cerca su internet
+  rispondiWeb(c);
 }
 
-function avvia(){if(listening||speaking||!running)return;try{rec.start();}catch(e){}}
-
 function elabora(t){
+  if(occupato)return;
   agg(t,"t");
-  if(attesa){attesa=false;return esegui(t);}
+  if(attesaFn){var f=attesaFn;attesaFn=null;return f(t);}
   var m=t.match(/giunior|iunior|juniore|junior/);
   if(m){
     var c=t.slice(m.index+m[0].length).replace(/^[\s,.]+/,"");
-    if(!c){attesa=true;parla("Dimmi!");}else esegui(c);
+    if(!c){attesaFn=esegui;parla("Dimmi!");}else esegui(c);
   }else if(Date.now()<svegliaFino){
     esegui(t,true);
   }
 }
 
-function init(){
-  rec=new SR();rec.lang="it-IT";rec.continuous=false;rec.interimResults=true;
-  rec.onstart=function(){
-    listening=true;setMode("ascolto");
-    stat(Date.now()<svegliaFino?"Ti ascolto… continua pure, senza dire “Junior”":"In ascolto… di’ “Junior”");
-  };
-  rec.onresult=function(ev){
-    if(speaking)return;
-    for(var i=ev.resultIndex;i<ev.results.length;i++){
-      var t=ev.results[i][0].transcript.toLowerCase().trim();
-      if(ev.results[i].isFinal)elabora(t);else stat("Sento: "+t);
-    }
-  };
-  rec.onend=function(){listening=false;if(running&&!speaking)setTimeout(avvia,250);};
-  rec.onerror=function(e){
-    var msg=null;
-    if(e.error==="service-not-allowed")msg="Attiva la dettatura: Impostazioni > Generali > Tastiera > Abilita dettatura (e controlla che Siri sia attivo).";
-    else if(e.error==="not-allowed")msg="Microfono bloccato. Consenti il microfono per questo sito nelle impostazioni di Safari.";
-    else if(e.error==="network")msg="Serve una connessione internet.";
-    if(msg){stat(msg);running=false;setMode("idle");orb.textContent="AVVIA";}
-  };
+function avvia(){
+  if(!running||speaking||occupato)return;
+  fermaRec();
+  try{
+    rec=new SR();rec.lang="it-IT";rec.continuous=false;rec.interimResults=true;
+    ultimaAttivita=Date.now();
+    rec.onstart=function(){
+      ultimaAttivita=Date.now();setMode("ascolto");
+      stat(Date.now()<svegliaFino?"Ti ascolto… continua pure, senza dire “Junior”":"In ascolto… di’ “Junior”");
+    };
+    rec.onresult=function(ev){
+      ultimaAttivita=Date.now();
+      if(speaking||occupato)return;
+      for(var i=ev.resultIndex;i<ev.results.length;i++){
+        var t=ev.results[i][0].transcript.toLowerCase().trim();
+        if(ev.results[i].isFinal)elabora(t);else stat("Sento: "+t);
+      }
+    };
+    rec.onend=function(){if(running&&!speaking&&!occupato)setTimeout(avvia,300);};
+    rec.onerror=function(e){
+      var msg=null;
+      if(e.error==="service-not-allowed")msg="Attiva la dettatura: Impostazioni > Generali > Tastiera > Abilita dettatura (e controlla che Siri sia attivo).";
+      else if(e.error==="not-allowed")msg="Microfono bloccato. Consenti il microfono per questo sito nelle impostazioni di Safari.";
+      else if(e.error==="network")msg="Serve una connessione internet.";
+      if(msg){stat(msg);running=false;setMode("idle");orb.textContent="AVVIA";}
+    };
+    rec.start();
+  }catch(e){stat("Microfono: "+e.message);}
 }
 
-setInterval(function(){if(running&&!speaking&&!listening)avvia();},1500);
+setInterval(function(){
+  if(running&&!speaking&&!occupato&&Date.now()-ultimaAttivita>8000)avvia();
+},2000);
 
-orb.onclick=function(){
-  sblocca();
+orb.addEventListener("click",function(){
+  try{var u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u);}catch(e){}
   if(!SR){stat("Questo browser non supporta il riconoscimento vocale. Usa Safari o Chrome.");return;}
-  if(running){running=false;try{rec.abort();}catch(e){}setMode("idle");orb.textContent="AVVIA";stat("");return;}
-  if(!rec)init();
+  if(running){running=false;fermaRec();setMode("idle");orb.textContent="AVVIA";stat("");return;}
   running=true;orb.textContent="STOP";
   avvia();
-};
+});
 
-$("test").onclick=function(){
-  var v=scegliVoce();
-  parla("Yo! Sono Junior. Se mi senti, la voce funziona alla grande!");
-  setTimeout(function(){if(speaking)stat("Voce: "+(v?v.name:"predefinita"));},50);
-};
-$("invia").onclick=function(){var v=$("testo").value.toLowerCase().trim();if(v){agg(v,"t");$("testo").value="";esegui(v.replace(/^junior[\s,.]*/,""));}};
+$("test").addEventListener("click",function(){parla("Yo! Sono Junior. Se mi senti, la voce funziona alla grande!");});
+$("invia").addEventListener("click",function(){var v=$("testo").value.toLowerCase().trim();if(v){agg(v,"t");$("testo").value="";esegui(v.replace(/^junior[\s,.]*/,""));}});
 var chips=document.querySelectorAll(".chip[data-c]");
-for(var k=0;k<chips.length;k++){chips[k].onclick=function(){esegui(this.getAttribute("data-c"));};}
+for(var k=0;k<chips.length;k++){chips[k].addEventListener("click",function(){esegui(this.getAttribute("data-c"));});}
 if(window.speechSynthesis)speechSynthesis.getVoices();
 </script>
 </body>
